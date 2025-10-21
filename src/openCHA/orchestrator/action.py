@@ -18,7 +18,7 @@ class Action(BaseModel):
 
     id: str = str(uuid.uuid4())
     task_name: str = ""
-    task_inputs: List[str] = None
+    task_inputs: List[Any] = None
     task_response: Any = None
     output_type: bool = False
     datapipe: DataPipe = None
