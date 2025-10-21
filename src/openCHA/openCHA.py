@@ -93,6 +93,7 @@ class openCHA(BaseModel):
         chat_history,
         check_box,
         tasks_list,
+        **kwargs
     ):
         os.environ["OPENAI_API_KEY"] = openai_api_key_input
         os.environ["SEPR_API_KEY"] = serp_api_key_input
@@ -101,6 +102,7 @@ class openCHA(BaseModel):
             chat_history=chat_history,
             tasks_list=tasks_list,
             use_history=check_box,
+            **kwargs
         )
 
         files = parse_addresses(response)
@@ -123,11 +125,11 @@ class openCHA(BaseModel):
     def reset(self):
         self.previous_actions = []
 
-    def run_with_interface(self):
+    def run_with_interface(self, **kwargs):
         available_tasks = [key.value for key in TASK_TO_CLASS.keys()]
         interface = Interface()
         interface.prepare_interface(
-            respond=self.respond,
+            respond=lambda *args, **inner_kwargs: self.respond(*args, **kwargs, **inner_kwargs),
             reset=self.reset,
             upload_meta=self.upload_meta,
             available_tasks=available_tasks,

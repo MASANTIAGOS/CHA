@@ -27,6 +27,8 @@ class OpenAILLM(BaseLLM):
         "gpt-3.5-turbo-16k": 16385,
         "gpt-3.5-turbo-1106": 16385,
         "gpt-3.5-turbo-16k-0613": 16385,
+        "gpt-4o-mini": 128000,
+        "gpt-5-mini": 400000,
         "text-ada-001": 2049,
         "ada": 2049,
         "text-babbage-001": 2040,
@@ -43,7 +45,7 @@ class OpenAILLM(BaseLLM):
     }
     api_key: str = ""
     llm_model: Any = None
-    max_tokens: int = 150
+    max_tokens: int = 10000
 
     @model_validator(mode="before")
     def validate_environment(cls, values: Dict) -> Dict:
@@ -138,8 +140,7 @@ class OpenAILLM(BaseLLM):
 
 
         """
-
-        return response.choices[0].message.content
+        return response.output_text
 
     def _prepare_prompt(self, prompt) -> Any:
         """
@@ -169,27 +170,27 @@ class OpenAILLM(BaseLLM):
 
 
         """
-        model_name = "gpt-3.5-turbo-1106"
+        model_name = "gpt-5-mini"
         if "model_name" in kwargs:
             model_name = kwargs["model_name"]
         if model_name not in self.get_model_names():
             raise ValueError(
                 "model_name is not specified or OpenAI does not support provided model_name"
             )
-        stop = kwargs["stop"] if "stop" in kwargs else None
-        max_tokens = (
-            kwargs["max_tokens"]
-            if "max_tokens" in kwargs
-            else self.max_tokens
-        )
-        print("here", max_tokens, model_name)
+        stop = kwargs["stop"] if "stop" in kwargs else None        
 
         self.llm_model.api_key = self.api_key
         query = self._prepare_prompt(query)
-        response = self.llm_model.chat.completions.create(
-            model=model_name,
-            messages=query,
-            max_tokens=max_tokens,
-            stop=stop,
-        )
+        params = {
+            "model": model_name,
+            "input": query,                        
+        }
+        if "max_tokens" in kwargs:
+            params["max_output_tokens"] = kwargs["max_tokens"]  
+        
+        # Add model-specific options
+        if model_name.startswith("gpt-5") and "reasoning_input" in kwargs:
+            params["reasoning"] = {"effort": kwargs["reasoning_input"]}
+
+        response = self.llm_model.responses.create(**params)
         return self._parse_response(response)

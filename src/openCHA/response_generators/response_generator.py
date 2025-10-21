@@ -17,7 +17,7 @@ class BaseResponseGenerator(BaseModel):
 
     llm_model: BaseLLM = None
     prefix: str = ""
-    summarize_prompt: bool = True
+    summarize_prompt: bool = False
     max_tokens_allowed: int = 10000
 
     class Config:
@@ -136,7 +136,7 @@ class BaseResponseGenerator(BaseModel):
             .replace("{thinker}", thinker)
             .replace("{prefix}", prefix)
         )
-        kwargs["max_tokens"] = 2000
+        # kwargs["max_tokens"] = 2000
         response = self._response_generator_model.generate(
             query=prompt, **kwargs
         )
