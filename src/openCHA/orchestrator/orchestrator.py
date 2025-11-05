@@ -243,11 +243,11 @@ class Orchestrator(BaseModel):
         if action.output_type:
             self.runtime[action.task_response] = False
         for task_input in action.task_inputs:
-            if task_input in self.runtime:
-                self.runtime[task_input] = True
+            if str(task_input) in self.runtime:
+                self.runtime[str(task_input)] = True
 
     def execute_task(
-        self, task_name: str, task_inputs: List[str]
+        self, task_name: str, task_inputs: List[Any]
     ) -> Any:
         """
             Execute the specified task based on the planner's selected **Action**. This method executes a specific task based on the provided action.
@@ -313,7 +313,7 @@ class Orchestrator(BaseModel):
         return query
 
     def _prepare_planner_response_for_response_generator(self):
-        print("runtime", self.runtime)
+        # print("runtime", self.runtime)
         final_response = ""
         for action in self.current_actions:
             final_response += action.dict(
@@ -392,6 +392,7 @@ class Orchestrator(BaseModel):
                     if "response_generator_prefix_prompt" in kwargs
                     else ""
                 )
+                kwargs["reasoning_input"] = "medium"
                 return self.response_generator.generate(
                     query=query,
                     thinker=thinker,
@@ -399,6 +400,7 @@ class Orchestrator(BaseModel):
                     **kwargs,
                 )
             except Exception as e:
+                logging.exception(e)
                 print(e)
                 retries += 1
         return "We currently have problem processing your question. Please try again after a while."
@@ -477,6 +479,7 @@ class Orchestrator(BaseModel):
                 self.print_log(
                     "error", f"Planning Error:\n{error}\n\n"
                 )
+                logging.exception(error)
                 self.current_actions = []
                 i += 1
                 if i > self.max_retries:

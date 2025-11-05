@@ -8,6 +8,7 @@ from typing import List
 from openCHA.planners import Action
 from openCHA.planners import BasePlanner
 from openCHA.planners import PlanFinish
+from datetime import date
 
 
 class TreeOfThoughtPlanner(BasePlanner):
@@ -62,7 +63,8 @@ class TreeOfThoughtPlanner(BasePlanner):
     def _planner_prompt(self):
         return [
             """As a knowledgeable and empathetic health assistant, your primary objective is to provide the user with precise and valuable \
-information regarding their health and well-being. Utilize the available tools effectively to answer health-related queries. \
+information regarding their health and well-being. Be mindful of time. Today is {today}. Utilize the available tools effectively to answer health-related queries. \
+Bound yourself to the tools and information provided. For example, if there is no analysis tool provided, don't suggest analyzing the data. \
 Here are the tools at your disposal:
 {tool_names}
 
@@ -103,7 +105,7 @@ Tools:
 
 You are skilled python programmer that can solve problems and convert them into python codes. \
 Using the selected final strategy mentioned in the 'Decision:
-', create a python code inside a ```python ``` block that outlines a sequence of steps using the Tools. \
+', create a python code inside a ```python ``` block that outlines a sequence of steps using the Tools. Be mindful of time. Today is {today}.\
 assume that there is an **self.execute_task** function that can execute the tools in it. The execute_task \
 recieves task name and an array of the inputs and returns the result. Make sure that you always pass and array as second argument. \
 You can call tools like this: \
@@ -113,7 +115,8 @@ If a step's output is required as input for a subsequent step, ensure the python
 The output variables should directly passed as inputs with no changes in the wording.
 If the tool input is a datapipe only put the variable as the input. \
 For each tool, include necessary parameters directly without any names and assume each will return an output. \
-The outputs' description are provided for each Tool individually. Make sure you use the directives when passing the outputs.
+The outputs' description are provided for each Tool individually. Make sure you use the directives when passing the outputs. \
+Try to write as minimal code as possible and mostly use the tools to perform the tasks. Don't try to write complex logic or analysis by yourself. It should only be a series of tools executions and no other codes. \
 
 Question: {input}
 """,
@@ -227,6 +230,7 @@ Question: {input}
 
         prompt = (
             self._planner_prompt[0]
+            .replace("{today}", str(date.today()))
             .replace("{input}", query)
             .replace("{meta}", ", ".join(meta))
             .replace(
@@ -237,14 +241,15 @@ Question: {input}
         )
         # if len(previous_actions) > 0:
         # prompt += "\nThought:"
-        print(prompt)
-        kwargs["max_tokens"] = 1000
+        # print(prompt)        
+        kwargs["reasoning_input"] = "medium"
         response = self._planner_model.generate(
             query=prompt, **kwargs
         )
         print("respp\n\n", response)
         prompt = (
             self._planner_prompt[1]
+            .replace("{today}", str(date.today()))
             .replace(
                 "{strategy}",
                 "Decision:\n" + response.split("Decision:")[-1],
@@ -253,8 +258,9 @@ Question: {input}
             .replace("{previous_actions}", previous_actions_prompt)
             .replace("{input}", query)
         )
-        print("prompt2\n\n", prompt)
+        # print("prompt2\n\n", prompt)
         kwargs["stop"] = self._stop
+        kwargs["reasoning_input"] = "low"
         response = self._planner_model.generate(
             query=prompt, **kwargs
         )
